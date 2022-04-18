@@ -53,6 +53,6 @@ jobs:
         uses: codecov/codecov-action@v3
         with:
           file: ./coverage.out
-          flags: unittests,golang
+          flags: unittests
           env_vars: OS,GOLANG
           fail_ci_if_error: true
