@@ -19,7 +19,3 @@ lint-fix:
 	goimports -local github.com/thrownew/go-middlewares -w .
 	go fmt ./...
 	golangci-lint run -v
-
-.PHONY: generate
-generate:
-	go generate ./...
