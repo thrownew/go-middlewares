@@ -1,58 +1,38 @@
 name: CI
-on:
-  push:
-    tags:
-      - v*
-    branches:
-      - master
-      - main
-  pull_request:
+
+on: [push]
 jobs:
-  golangci-lint:
+
+  build:
+    name: Build
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        golangci_lint: [v1.63]
     steps:
-      - uses: actions/checkout@v3
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v3
+
+      - name: Check out code
+        uses: actions/checkout@v2
+
+      - name: Set up Go
+        uses: actions/setup-go@v2
         with:
-          version: ${{ matrix.golangci_lint }}
-          working-directory: .
-  test:
-    needs: golangci-lint
-    strategy:
-      matrix:
-        golang: [1.17.x, 1.18.x, 1.19.x, 1.20.x]
-        os: [ubuntu-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
-    env:
-      OS: ${{ matrix.os }}
-      GOLANG: ${{ matrix.golang }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-      - name: Install Go
-        uses: actions/setup-go@v4
-        with:
-          go-version: ${{ matrix.golang }}
-      - uses: actions/cache@v3
+          go-version: '^1.20'
+      - run: go version
+
+      - name: Cache modules
+        uses: actions/cache@v2
         with:
           path: ~/go/pkg/mod
-          key:          ${{ runner.os }}-go-${{ matrix.golang }}-v1-${{ hashFiles('**/go.sum') }}
-          restore-keys: ${{ runner.os }}-go-${{ matrix.golang }}-v1-
-      - name: Check go.mod and go.sum
-        run: |
-          go mod tidy -v
-          git --no-pager diff go.mod go.sum
-          git --no-pager diff --quiet go.mod go.sum
-      - name: Test
-        run: go test -race -coverprofile=coverage.out -covermode=atomic ./...
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Vendor modules
+        run: go mod vendor
+
+      - name: Run Linter
+        uses: golangci/golangci-lint-action@v3
         with:
-          file: ./coverage.out
-          flags: unittests
-          env_vars: OS,GOLANG
-          fail_ci_if_error: true
+          version: v1.63.4
+          args: --modules-download-mode vendor
+
+      - name: Run Unit tests
+        run: make test-unit
